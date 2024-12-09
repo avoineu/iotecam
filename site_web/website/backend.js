@@ -34,6 +34,9 @@ client.on('message', (topic, message) => {
     const ttnData = JSON.parse(message.toString());
     console.log('Received message:', ttnData);
 
+    const decodedPayload = ttnData.uplink_message.decoded_payload;
+    console.log('Decoded payload:', decodedPayload);
+
     io.emit('ttn-data', ttnData);
 });
 

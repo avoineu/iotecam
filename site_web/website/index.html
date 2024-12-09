@@ -133,7 +133,7 @@
             const byteContent = data?.uplink_message?.decoded_payload?.bytes;
 
             // BPM: Assuming that the BPM is in the 9th byte
-            const bpm = byteContent ? byteContent[9] : 'No BPM data';
+            const bpm = byteContent ? byteContent[8] : 'No BPM data';
 
             // Latitude and Longitude from byte content
             if (byteContent && byteContent.length >= 10) {
