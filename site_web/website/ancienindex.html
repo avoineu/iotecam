@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.5">
+    <title>Cat Heartbeat and Location Tracker</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/socket.io/socket.io.js"></script> <!-- Ensure Socket.io is included -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>The Cat-Beat Tracker</h1>
+            </div>
+        </header>
+
+        <!-- BPM Section -->
+        <section class="card bpm-section">
+            <h2>Heartbeat</h2>
+            <div class="bpm-content">
+                <!-- Dynamically filled BPM value -->
+                <div id="bpm-value" class="bpm-value">Loading BPM...</div>
+                <section class="card bpm-section">
+                    <h2>Heartbeat</h2>
+                    <div class="bpm-content">
+                        <!-- Espace pour le graphique -->
+                        <canvas id="bpmChart" width="400" height="200"></canvas>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <!-- Position Section (GPS) -->
+        <section class="card position-section">
+            <button class="locate-btn">Locate the Cat</button>
+            
+            <div class="map">
+                <div class="map-placeholder">
+                    <!-- Dynamically filled map (simulated placeholder for now) -->
+                    <div id="coordinates" class="coordinates">
+                        <p>Latitude: <span id="latitude">Loading...</span></p>
+                        <p>Longitude: <span id="longitude">Loading...</span></p>
+                    </div>
+                </div>
+            </div>
+            <!-- Dynamically filled coordinates (Latitude & Longitude) -->
+        </section>
+    </div>
+
+    <script>
+        const socket = io();
+
+        // Initialize the counter for the X axis labels
+        let counter = 1;
+
+        // Configuration du graphique BPM avec Chart.js
+        const ctx = document.getElementById('bpmChart').getContext('2d');
+        const bpmData = {
+            labels: [], // Les étiquettes de l'axe X (compteur 1, 2, 3, ...)
+            datasets: [{
+                label: 'BPM', // Légende du graphique
+                data: [], // Les valeurs du BPM
+                borderColor: 'green', // Couleur de la ligne
+                backgroundColor: 'rgba(0, 128, 0, 0.2)', // Couleur du fond sous la ligne
+                fill: true, // Remplir sous la courbe
+                lineTension: 0.1, // Lissage de la courbe
+            }]
+        };
+
+        // Créer le graphique
+        const bpmChart = new Chart(ctx, {
+            type: 'line',
+            data: bpmData,
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        type: 'linear', // Permet d'utiliser des nombres sur l'axe X
+                        position: 'bottom',
+                        ticks: {
+                            autoSkip: true,
+                            maxTicksLimit: 10,
+                        },
+                    },
+                    y: {
+                        min: 0,  // Limite inférieure de l'axe Y
+                        max: 200, // Limite supérieure de l'axe Y
+                    }
+                }
+            }
+        });
+
+        // Gérer la réception des données via le socket
+        socket.on('ttn-data', (data) => {
+            console.log('Received data:', data);
+
+            // Extraire les octets pour le BPM et les coordonnées (latitude, longitude)
+            const byteContent = data?.uplink_message?.decoded_payload?.bytes;
+
+            // BPM (supposé être dans le byte 9)
+            const bpm = byteContent ? byteContent[9] : 'No BPM data';
+
+            // Latitude et Longitude
+            if (byteContent && byteContent.length >= 8) {
+                // Decode Latitude
+                const lat = (byteContent[0] << 24) | (byteContent[1] << 16) | (byteContent[2] << 8) | byteContent[3];
+                const latitude = lat / 1e5; // Conversion en valeur flottante
+
+                // Decode Longitude
+                const lon = (byteContent[4] << 24) | (byteContent[5] << 16) | (byteContent[6] << 8) | byteContent[7];
+                const longitude = lon / 1e5; // Conversion en valeur flottante
+
+                // Mettre à jour les éléments HTML avec Latitude et Longitude
+                document.getElementById('latitude').innerText = latitude.toFixed(5);
+                document.getElementById('longitude').innerText = longitude.toFixed(5);
+            }
+
+            // Mettre à jour le BPM dans le HTML
+            document.getElementById('bpm-value').innerText = bpm ? `${bpm} B.P.M` : 'No BPM data';
+
+            // Ajouter la nouvelle valeur au graphique
+            bpmData.labels.push(counter); // Ajouter le compteur à l'axe X
+            bpmData.datasets[0].data.push(bpm); // Ajouter la valeur du BPM aux données
+
+            // Incrémenter le compteur
+            counter++;
+
+            // Mettre à jour le graphique
+            bpmChart.update();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.5">
+    <title>Cat Heartbeat and Location Tracker</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/socket.io/socket.io.js"></script> <!-- Ensure Socket.io is included -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>The Cat-Beat Tracker</h1>
+            </div>
+        </header>
+
+        <!-- BPM Section -->
+        <section class="card bpm-section">
+            <h2>Heartbeat</h2>
+            <div class="bpm-content">
+                <!-- Dynamically filled BPM value -->
+                <div id="bpm-value" class="bpm-value">Loading BPM...</div>
+                <!-- Espace pour le graphique -->
+                <section class="card bpm-section">
+                    <h2>Heartbeat</h2>
+                <div class="chart-container">
+                    <canvas id="bpmChart" width="600" height="400"></canvas>
+                </div>
+                </section>
+            </div>
+        </section>
+
+        <!-- Position Section (GPS) -->
+        <section class="card position-section">
+            <div id="map"></div>
+            <div class="map">
+                <div class="map-placeholder">
+                    <!-- Dynamically filled map (simulated placeholder for now) -->
+                    <div id="coordinates" class="coordinates">
+                        <p>Latitude: <span id="latitude">Loading...</span></p>
+                        <p>Longitude: <span id="longitude">Loading...</span></p>
+                    </div>
+                </div>
+            </div>
+            <!-- Dynamically filled coordinates (Latitude & Longitude) -->
+        </section>
+    </div>
+
+    <script>
+        const socket = io();
+
+        // Initialize the counter for the X axis labels
+        let counter = 1;
+
+        // Configuration du graphique BPM avec Chart.js
+        const ctx = document.getElementById('bpmChart').getContext('2d');
+        const bpmData = {
+            labels: [], // Les étiquettes de l'axe X (compteur 1, 2, 3, ...)
+            datasets: [{
+                label: 'BPM', // Légende du graphique
+                data: [], // Les valeurs du BPM
+                borderColor: 'green', // Couleur de la ligne
+                backgroundColor: 'rgba(0, 128, 0, 0.2)', // Couleur du fond sous la ligne
+                fill: true, // Remplir sous la courbe
+                lineTension: 0.1, // Lissage de la courbe
+            }]
+        };
+
+        // Créer le graphique
+        const bpmChart = new Chart(ctx, {
+            type: 'line',
+            data: bpmData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'linear', // Permet d'utiliser des nombres sur l'axe X
+                        position: 'bottom',
+                        ticks: {
+                            autoSkip: true,
+                            maxTicksLimit: 10,
+                        },
+                    },
+                    y: {
+                        min: 0,  // Limite inférieure de l'axe Y
+                        max: 200, // Limite supérieure de l'axe Y
+                    }
+                }
+            }
+        });
+
+        // Leaflet map initialization
+        let map = L.map('map').setView([50.84976, 4.45388], 13); // Set initial coordinates to 50.84976, 4.45388
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Marker array
+        let markers = [];
+        let markerCount = 0;  // Counter for marker numbering
+
+        // Create a polyline for the path connecting the markers
+        let path = L.polyline([], { color: 'red' }).addTo(map);
+
+        // Update the map and marker with new coordinates
+        function updateMap(latitude, longitude) {
+            markerCount++;  // Increment marker number
+            
+            // Add new marker with number label
+            const newMarker = L.marker([latitude, longitude]).addTo(map)
+                .bindTooltip(markerCount.toString(), { permanent: true, offset: [0, 0], className: 'marker-label' });
+            markers.push(newMarker);
+
+            // Add the new marker's coordinates to the path
+            path.setLatLngs(markers.map(marker => marker.getLatLng()));
+            
+            // Center the map on the new position
+            map.setView([latitude, longitude], 13);
+        }
+
+        // When data is received from the backend
+        socket.on('ttn-data', (data) => {
+            console.log('Received data:', data);
+
+            // Extract the byte content for GPS (Longitude and Latitude) and BPM
+            const byteContent = data?.uplink_message?.decoded_payload?.bytes;
+
+            // BPM: Assuming that the BPM is in the 9th byte
+            const bpm = byteContent ? byteContent[9] : 'No BPM data';
+
+            // Latitude and Longitude from byte content
+            if (byteContent && byteContent.length >= 10) {
+                // Decode Latitude
+                const lat = (byteContent[0] << 24) | (byteContent[1] << 16) | (byteContent[2] << 8) | byteContent[3];
+                const latitude = lat / 1e5; // Convert to floating point
+
+                // Decode Longitude
+                const lon = (byteContent[4] << 24) | (byteContent[5] << 16) | (byteContent[6] << 8) | byteContent[7];
+                const longitude = lon / 1e5; // Convert to floating point
+
+                // Update the map with the new location
+                updateMap(latitude, longitude);
+
+                // Update HTML with Latitude, Longitude
+                document.getElementById('latitude').innerText = latitude.toFixed(5);
+                document.getElementById('longitude').innerText = longitude.toFixed(5);
+            }
+
+            // Update the BPM value
+            document.getElementById('bpm-value').innerText = bpm ? `${bpm} B.P.M` : 'No BPM data';
+
+            // Ajouter la nouvelle valeur au graphique
+            bpmData.labels.push(counter); // Ajouter le compteur à l'axe X
+            bpmData.datasets[0].data.push(bpm); // Ajouter la valeur du BPM aux données
+
+            // Incrémenter le compteur
+            counter++;
+
+            // Mettre à jour le graphique
+            bpmChart.update();
+        });
+    </script>
+</body>
+</html>
