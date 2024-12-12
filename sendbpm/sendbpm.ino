@@ -8,6 +8,7 @@
 
 MAX30105 particleSensor;
 
+
 const byte RATE_SIZE = 4; // Increase this for more averaging. 4 is good.
 byte rates[RATE_SIZE]; // Array of heart rates
 byte rateSpot = 0;
@@ -200,7 +201,7 @@ void buildPayload() {
     payload[6] = 6;
     payload[7] = 7;
     payload[8] = (uint8_t)beatAvg; // BPM value
-    payload[9] = (uint8_t)(beatAvg >> 8); // BPM value (high byte)
+    payload[9] = (uint8_t)(beatsPerMinute); // BPM 
     payload[10] = 10;
     payload[11] = 11;
     payload[12] = 12;
