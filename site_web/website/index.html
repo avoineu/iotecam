@@ -22,9 +22,7 @@
         <section class="card bpm-section">
             <h2>Heartbeat</h2>
             <div class="bpm-content">
-                <!-- Dynamically filled BPM value -->
                 <div id="bpm-value" class="bpm-value">Loading BPM...</div>
-                <!-- Espace pour le graphique -->
                 <section class="card bpm-section">
                     <h2>Heartbeat</h2>
                 <div class="chart-container">
@@ -39,16 +37,23 @@
             <div id="map"></div>
             <div class="map">
                 <div class="map-placeholder">
-                    <!-- Dynamically filled map (simulated placeholder for now) -->
                     <div id="coordinates" class="coordinates">
                         <p>Latitude: <span id="latitude">Loading...</span></p>
                         <p>Longitude: <span id="longitude">Loading...</span></p>
                     </div>
                 </div>
             </div>
-            <!-- Dynamically filled coordinates (Latitude & Longitude) -->
+        </section>
+
+        <!-- RFID Section -->
+        <section class="card rfid-section">
+            <h2>RFID Status</h2>
+            <div id="rfid-rectangle" style="border: 1px solid black; padding: 10px; margin-top: 20px;">
+                <p id="rfid-message">No cat detected</p>
+            </div>
         </section>
     </div>
+
 
     <script>
         const socket = io();
@@ -59,18 +64,18 @@
         // Configuration du graphique BPM avec Chart.js
         const ctx = document.getElementById('bpmChart').getContext('2d');
         const bpmData = {
-            labels: [], // Les étiquettes de l'axe X (compteur 1, 2, 3, ...)
+            labels: [], 
             datasets: [{
-                label: 'BPM', // Légende du graphique
-                data: [], // Les valeurs du BPM
-                borderColor: 'green', // Couleur de la ligne
-                backgroundColor: 'rgba(0, 128, 0, 0.2)', // Couleur du fond sous la ligne
-                fill: true, // Remplir sous la courbe
-                lineTension: 0.1, // Lissage de la courbe
+                label: 'BPM', 
+                data: [], 
+                borderColor: 'green', 
+                backgroundColor: 'rgba(0, 128, 0, 0.2)',
+                fill: true, 
+                lineTension: 0.1, 
             }]
         };
 
-        // Créer le graphique
+        //chart
         const bpmChart = new Chart(ctx, {
             type: 'line',
             data: bpmData,
@@ -79,7 +84,7 @@
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        type: 'linear', // Permet d'utiliser des nombres sur l'axe X
+                        type: 'linear', 
                         position: 'bottom',
                         ticks: {
                             autoSkip: true,
@@ -87,8 +92,8 @@
                         },
                     },
                     y: {
-                        min: 0,  // Limite inférieure de l'axe Y
-                        max: 200, // Limite supérieure de l'axe Y
+                        min: 0, 
+                        max: 200, 
                     }
                 }
             }
@@ -156,15 +161,19 @@
             // Update the BPM value
             document.getElementById('bpm-value').innerText = bpm ? `${bpm} B.P.M` : 'No BPM data';
 
-            // Ajouter la nouvelle valeur au graphique
-            bpmData.labels.push(counter); // Ajouter le compteur à l'axe X
-            bpmData.datasets[0].data.push(bpm); // Ajouter la valeur du BPM aux données
+            // Update chart data
+            bpmData.labels.push(counter); 
+            bpmData.datasets[0].data.push(bpm); 
 
-            // Incrémenter le compteur
             counter++;
 
-            // Mettre à jour le graphique
+            // Update the chart
             bpmChart.update();
+
+            // Update the RFID status
+            const catNumber = byteContent ? byteContent[11] : 0;
+            const rfidMessage = catNumber ? `Cat ${catNumber} was detected` : 'No cat detected';
+            document.getElementById('rfid-message').innerText = rfidMessage;
         });
     </script>
 </body>

@@ -27,6 +27,11 @@ long lastBeat = 0;
 float beatsPerMinute;
 int beatAvg;
 
+// RFID setup
+String knownRFIDs[8];
+int rfidCount = 0;
+int currentCatNumber = 0;
+
 // Payload setup
 unsigned long acc_timer = millis();
 const int taskDelay = 100;
@@ -132,6 +137,37 @@ void loop() {
     }
   }
 
+  // Read RFID data
+  if (Serial1.available()) {
+    String receivedData = "";
+    while (Serial1.available()) {
+      receivedData += (char)Serial1.read();
+    }
+    Serial.println("Données reçues de l'Arduino :");
+    Serial.println(receivedData);
+
+    // Check if the RFID card is already known
+    int catNumber = -1;
+    for (int i = 0; i < rfidCount; i++) {
+      if (knownRFIDs[i] == receivedData) {
+        catNumber = i + 1;
+        break;
+      }
+    }
+
+    // If the RFID card is not known, add it to the list
+    if (catNumber == -1 && rfidCount < 8) {
+      knownRFIDs[rfidCount] = receivedData;
+      catNumber = rfidCount + 1;
+      rfidCount++;
+    }
+
+    // If the RFID card is known or has been added, set the current cat number
+    if (catNumber != -1) {
+      currentCatNumber = catNumber;
+    }
+  }
+
   // Build and send payload every second
   if (millis() - lastSendTime >= sendInterval) {
     lastSendTime = millis();
@@ -165,6 +201,7 @@ void buildPayload() {
 
   payload[9] = (uint8_t)beatAvg;
   payload[10] = (uint8_t)(beatAvg >> 8);
+  payload[11] = (uint8_t)currentCatNumber;
 
   Serial.println("Payload construit:");
   for (int i = 0; i < 11; i++) {
