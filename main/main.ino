@@ -73,7 +73,7 @@ void setup() {
   Serial2.begin(9600);
   pinPeripheral(12, PIO_SERCOM);
   pinPeripheral(10, PIO_SERCOM);
-  Serial.println("Démarrage du GPS...");
+  Serial.println("GPS starting...");
 
   // Heart rate setup
   if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
@@ -127,13 +127,13 @@ void loop() {
     Serial.println(beatAvg);
 
     if (gps.location.isValid()) {
-      Serial.println("Satellite trouvé");
+      Serial.println("Satellite found");
       Serial.print("Latitude: ");
       Serial.println(gps.location.lat(), 6);
       Serial.print("Longitude: ");
       Serial.println(gps.location.lng(), 6);
     } else {
-      Serial.println("Pas de satellite trouvé");
+      Serial.println("No satellite found");
     }
   }
 
@@ -143,7 +143,7 @@ void loop() {
     while (Serial1.available()) {
       receivedData += (char)Serial1.read();
     }
-    Serial.println("Données reçues de l'Arduino :");
+    Serial.println("Data received from arduino :");
     Serial.println(receivedData);
 
     // Check if the RFID card is already known
@@ -176,7 +176,7 @@ void loop() {
     } else {
       if (millis() - lastNoSatelliteTime >= noSatelliteInterval) {
         lastNoSatelliteTime = millis();
-        Serial.println("Pas de satellite trouvé, envoi annulé");
+        Serial.println("sent cancel, no satellite");
       }
     }
   }
@@ -203,7 +203,7 @@ void buildPayload() {
   payload[10] = (uint8_t)(beatAvg >> 8);
   payload[11] = (uint8_t)currentCatNumber;
 
-  Serial.println("Payload construit:");
+  Serial.println("Payload built:");
   for (int i = 0; i < 11; i++) {
     Serial.print(payload[i]);
     Serial.print(" ");
@@ -252,7 +252,6 @@ void onEvent(ev_t ev) {
       break;
     case EV_TXCOMPLETE:
       Serial.println(F("Payload sent successfully"));
-      Serial.println(F("PAYLOAD ENVOYÉ"));
       os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(TX_INTERVAL), do_send);
       break;
     case EV_LOST_TSYNC:
